@@ -8,8 +8,10 @@ import pytest
 def n2w_fst():
     single_digits = pn.string_map({"0": "zéro", "1": "un", "2": "deux", "3": "trois", "4": "quatre",
                                    "5": "cinq", "6": "six", "7": "sept", "8": "huit", "9": "neuf"})
-    
-    transformer = single_digits
+    tenths = pn.string_map({"10": "dix", "20": "vingt", "30": "trente", "40": "quarante",
+                            "50": "cinquante", "soixante": "six", "70": "soixante-dix", "80": "quatre-vingts", "quatre-vingt-dix": "neuf"})
+
+    transformer = single_digits | tenths
 
     return transformer
 
