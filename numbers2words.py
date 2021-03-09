@@ -11,7 +11,7 @@ def n2w_fst():
     numbers2 = pn.closure(numbers, 2)
     numbers3 = pn.closure(numbers, 3)
     sigma_star = (numbers | pn.a("^") | pn.a(" ") | pn.a(".")).star
-    chars = pn.u(*"asdfghjklqwertyuiopzxcvbnm- ^.")
+    chars = pn.u(*"asdfghjklqwertyuiopzxcvbnm- ^.*")
     sigma_star_extended = (chars.star | numbers).star
     splitter3 = pn.cdrewrite(pn.t("", "^^^ "), numbers,
                              numbers3, sigma_star, direction='rtl').optimize()
@@ -39,7 +39,8 @@ def n2w_fst():
                             "8^": "quatre-vingts", "9^": "quatre-vingt-dix", "0^": ""})
 
     t_10_to_19 = pn.string_map({"1^ 0": "dix", "1^ 1": "onze", "1^ 2": "douze", "1^ 3": "treize",
-                                "1^ 4": "quatorze", "1^ 5": "quinze", "1^ 6": "seize"})
+                                "1^ 4": "quatorze", "1^ 5": "quinze", "1^ 6": "seize",
+                                "1^ 7": "dix-sept", "1^ 8": "dix-huit", "1^ 9": "dix-neuf", "*": "dix"})
 
     tenths_e = t_10_to_19.ques + \
         (tenths + pn.t(" ", " ") + t_et1_to_9).ques + t_1_to_9.ques
@@ -54,7 +55,7 @@ def n2w_fst():
         single_digits, "[BOS]", "[EOS]", sigma_star_extended)
 
     delete_zeros = pn.cdrewrite(pn.string_map(
-        {"0^^^ ": "^^^ ", "0^^ ": "", "0^ ": "", }), sigma_star_extended, sigma_star_extended, sigma_star_extended)
+        {"0^^^ ": "^^^ ", "0^^ ": "", "0^ ": "", "1^ 0^^^": "*^^^"}), sigma_star_extended, sigma_star_extended, sigma_star_extended)
 
     clean_decimals = pn.cdrewrite(pn.string_map(
         {"^": "", " ": " "}), sigma_star_extended, sigma_star_extended, sigma_star_extended)
@@ -71,7 +72,6 @@ def n2w_fst():
         pn.cdrewrite(pn.t("", "zero"), "[BOS]", "[EOS]", sigma_star_extended)
     transformer = (virgule + (pn.t("", "-") + single_digits).star) | splitter0*delete_zeros*(thousands.ques + hundreds.ques +
                                                                                              t_10_to_19.ques + tenths_e.ques)*ws_remover
-
     return transformer.optimize()
 
 
