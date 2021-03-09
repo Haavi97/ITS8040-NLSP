@@ -10,8 +10,8 @@ def n2w_fst():
     numbers = pn.u(*"01", n_2_9)
     numbers2 = pn.closure(numbers, 2)
     numbers3 = pn.closure(numbers, 3)
-    sigma_star = (numbers | pn.a("^") | pn.a(" ")).star
-    chars = pn.u(*"asdfghjklqwertyuiopzxcvbnm- ^")
+    sigma_star = (numbers | pn.a("^") | pn.a(" ") | pn.a(".")).star
+    chars = pn.u(*"asdfghjklqwertyuiopzxcvbnm- ^.")
     sigma_star_extended = (chars.star | numbers).star
     splitter3 = pn.cdrewrite(pn.t("", "^^^ "), numbers,
                              numbers3, sigma_star, direction='rtl').optimize()
@@ -23,11 +23,14 @@ def n2w_fst():
 
     t_2_to_9 = pn.string_map({" 0": "", "0": "", "2": "deux", "3": "trois", "4": "quatre",
                                     "5": "cinq", "6": "six", "7": "sept", "8": "huit", "9": "neuf"})
+    t_et1_to_9 = pn.u(pn.string_map({"1": "et un"}), t_2_to_9)
     t_1_to_9 = pn.u(pn.string_map({"1": "un"}), t_2_to_9)
     t_0_to_9 = pn.u(pn.string_map({"1": ""}), t_2_to_9 + pn.t("", " "))
 
-    single_digits = pn.u(pn.string_map({"0": "zero", "1": "un"}), t_2_to_9)
+    single_digits = pn.string_map({"0": "zero", "1": "un", "2": "deux", "3": "trois", "4": "quatre",
+                                   "5": "cinq", "6": "six", "7": "sept", "8": "huit", "9": "neuf"})
     zero = pn.string_map({"0": "zero"})
+    virgule = pn.string_map({"0.": "zero-virgule"})
 
     # final_one = pn.cdrewrite(pn.t("1", "et-un"), " ","[EOS]", sigma_star_extended)
 
@@ -39,7 +42,7 @@ def n2w_fst():
                                 "1^ 4": "quatorze", "1^ 5": "quinze", "1^ 6": "seize"})
 
     tenths_e = t_10_to_19.ques + \
-        (tenths + pn.t(" ", " et ") + t_1_to_9).ques + t_1_to_9.ques
+        (tenths + pn.t(" ", " ") + t_et1_to_9).ques + t_1_to_9.ques
 
     hundreds = t_0_to_9 + pn.string_map({"^^": "cent"}) + pn.t(" ", " ")
 
@@ -53,11 +56,21 @@ def n2w_fst():
     delete_zeros = pn.cdrewrite(pn.string_map(
         {"0^^^ ": "^^^ ", "0^^ ": "", "0^ ": "", }), sigma_star_extended, sigma_star_extended, sigma_star_extended)
 
+    clean_decimals = pn.cdrewrite(pn.string_map(
+        {"^": "", " ": " "}), sigma_star_extended, sigma_star_extended, sigma_star_extended)
+
     ws_remover = pn.cdrewrite(
         pn.t(" ", "-"), sigma_star_extended, chars.plus, sigma_star_extended)
-    # ws_remover = ws_remover*pn.cdrewrite(pn.t("--", "-"), sigma_star_extended, chars.plus, sigma_star_extended)
-    transformer = zero | splitter0*delete_zeros*(thousands.ques + hundreds.ques +
-                                                 t_10_to_19.ques + tenths_e.ques)*ws_remover
+    ws_remover = ws_remover * \
+        pn.cdrewrite(pn.t("--", "-"), sigma_star_extended,
+                     chars.plus, sigma_star_extended)
+    ws_remover = ws_remover * \
+        pn.cdrewrite(pn.t(" ", ""), sigma_star_extended,
+                     "[EOS]", sigma_star_extended)
+    ws_remover = ws_remover * \
+        pn.cdrewrite(pn.t("", "zero"), "[BOS]", "[EOS]", sigma_star_extended)
+    transformer = (virgule + (pn.t("", "-") + single_digits).star) | splitter0*delete_zeros*(thousands.ques + hundreds.ques +
+                                                                                             t_10_to_19.ques + tenths_e.ques)*ws_remover
 
     return transformer.optimize()
 
