@@ -409,10 +409,10 @@ class ModelInterpolation(nn.Module):
         # Implement this
         ysum = 0
         for model in self.models:
-            ysum += model.forward(words, features)
+          ysum += torch.exp(model.forward(words, features))
         y = ysum/self.n
 
-        return y
+        return torch.log(y)
 
 
 """When you have completed the implementation, it should be possible to evaluate the interpolation performance like this:"""
