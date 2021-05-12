@@ -335,24 +335,34 @@ class DecoderAttn(nn.Module):
         self.hid_dim = hid_dim
         self.n_layers = n_layers
         self.output_dim = output_dim
-        self.embedding = nn.Embedding(output_dim, emb_dim)
+        self.embedding = nn.Embedding(output_dim + attn_dim, emb_dim)
         
         self.rnn = nn.GRU(emb_dim, hid_dim, n_layers, batch_first=True)
         # Implement this
         # BEGIN
-        # self.fc_out = 
         
         # add attention layer and linear transform layers
+        ########
+        # TO CHECK!!!!! The input sizes of the next linears
+        ########
+        self.key_linear = nn.Linear(hid_dim,int(attn_dim/n_layers),bias=False)
+        self.value_linear = nn.Linear(hid_dim,int(attn_dim/n_layers),bias=False)
+        self.query_linear = nn.Linear(hid_dim,int(attn_dim/n_layers),bias=False)
+        self.multihead_attn = nn.MultiheadAttention(attn_dim, 8, dropout=0.1,)
+        #                                            batch_first=True)
+        # self.post_attn = nn.Linear(attn_dim,hid_dim,bias=False)
+        self.fc_out = nn.Linear(hid_dim + attn_dim, output_dim)
 
         
         # END
+        
+        
         
     def forward(self, input, hidden, encoder_outputs):
              
         #input:  [batch size]
         #hidden:  [batch size, hid_dim]
         #encoder_outputs: [batch size, src_len, hid_dim]
-        
         input = input.unsqueeze(1)
         #input: [batch size, 1]
         
@@ -360,6 +370,35 @@ class DecoderAttn(nn.Module):
         #embedded:  [batch size, 1, emb dim]
 
         output, hidden = self.rnn(embedded, hidden)
+        #print(hidden.shape)
+        #print(output.shape)
+
+        key = self.key_linear(encoder_outputs)
+        key = key.permute(1,0,2)
+        value = self.value_linear(encoder_outputs)
+        value = value.permute(1,0,2)
+        query = self.query_linear(output)
+        query = query.permute(1,0,2)
+        #print(query.shape)
+        attn_output, _ = self.multihead_attn(query, key, value)
+        #attn_output = attn_output.view(32,1,-1)
+        attn_output = attn_output.permute(1,0,2)
+        # attn_output = self.post_attn(attn_output)
+        # attn_output = attn_output.view(32,1,44)
+        # attn_output = torch.sum(attn_output, dim=1, keepdim=True)
+        #print(output.shape)
+        #print(attn_output.shape)
+        try:
+            output = torch.cat((attn_output, output), 2)
+            #print(output.shape)
+        except:
+            print(query.shape)
+            print(key.shape)
+            print(value.shape)
+            output = torch.cat((output, output), 0)
+            output = torch.cat((attn_output, output), 2)
+            print(output.shape)
+        prediction = self.fc_out(output.squeeze(1))
 
         # implement this
         # BEGIN
