@@ -189,7 +189,7 @@ def epoch_time(start_time, end_time):
     return elapsed_mins, elapsed_secs
 
 def train(model, num_epochs, clip):
-  optimizer = torch.optim.Adam(model.parameters())
+  optimizer = torch.optim.AdamW(model.parameters(), lr=0.0008)
   criterion = nn.CrossEntropyLoss(ignore_index=CHARS.vocab.stoi[CHARS.pad_token])
 
   for epoch in range(num_epochs):
@@ -210,17 +210,18 @@ OUTPUT_DIM = len(PHONEMES.vocab)
 ENC_EMB_DIM = 500
 DEC_EMB_DIM = 50
 HID_DIM = 256
-N_LAYERS = 1
+N_LAYERS = 4
 
 enc = Encoder(INPUT_DIM, ENC_EMB_DIM, HID_DIM, N_LAYERS)
 dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, HID_DIM, N_LAYERS)
 
 model = Seq2Seq(enc, dec, device).to(device)
 
-N_EPOCHS = 10
+N_EPOCHS = 100
 CLIP = 1
 
 train(model, N_EPOCHS, CLIP)
+
 
 """Now, we implement a function that applies the model to a given string:"""
 
