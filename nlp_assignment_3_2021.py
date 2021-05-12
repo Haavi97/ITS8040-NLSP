@@ -188,9 +188,12 @@ def epoch_time(start_time, end_time):
     elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
     return elapsed_mins, elapsed_secs
 
-def train(model, num_epochs, clip):
-  optimizer = torch.optim.AdamW(model.parameters(), lr=0.0008)
+def train(model, num_epochs, clip, lrt=0.001):
+  optimizer = torch.optim.AdamW(model.parameters(), lr=lrt)
   criterion = nn.CrossEntropyLoss(ignore_index=CHARS.vocab.stoi[CHARS.pad_token])
+
+  train_losses = []
+  valid_losses = []
 
   for epoch in range(num_epochs):
       start_time = time.time()
@@ -198,10 +201,14 @@ def train(model, num_epochs, clip):
       valid_loss = evaluate(model, dev_iter, criterion)
       end_time = time.time()
       epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+
+      train_losses.append(train_loss)
+      valid_losses.append(valid_loss)
       
       print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
       print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
       print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+  return train_losses, valid_losses
 
 """Finally we can train our baseline model:"""
 
